@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",                // Modern JS output
+    "module": "commonjs",              // CommonJS for Node + Express
+    "rootDir": "src",                  // Source code folder
+    "outDir": "dist",                 // Compiled output folder
+
+    // Strictness
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "skipLibCheck": true,
+
+    // Module interop
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Source maps & declarations
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true
+  }
+}
