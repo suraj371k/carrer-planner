@@ -8,6 +8,8 @@ import connectDB from "./utils/db";
 // Routes
 import userRoutues from './routes/user.routes'
 import careerRoutes from './routes/career.routes'
+import jobRoutes from './routes/jobs.routes'
+import interviewRoutes from './routes/interview.routes'
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -27,6 +29,8 @@ app.get("/", (req: Request, res: Response) => {
 //routes
 app.use('/api/users' , userRoutues)
 app.use('/api/ai' , careerRoutes)
+app.use('/api/jobs' , jobRoutes)
+app.use('/api/interview' , interviewRoutes)
 
 
 // Connect to MongoDB
