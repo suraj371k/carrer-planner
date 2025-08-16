@@ -163,7 +163,7 @@ EXAMPLE STRUCTURE (for reference only):
 
     // Get the Gemini Pro model
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.5-pro",
+      model: "gemini-2.5-flash",
       generationConfig: {
         responseMimeType: "application/json",
       },

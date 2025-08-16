@@ -58,6 +58,8 @@ export const startInterview = async (req: Request, res: Response) => {
       userId,
       track,
       questions,
+      startTime: new Date(),
+      duration: 20 * 60 * 1000, // 20 min in ms
     });
 
     await session.save();
@@ -96,6 +98,24 @@ export const submitAnswer = async (req: Request, res: Response) => {
         message: "Session not found or already completed",
       });
     }
+
+    // Check if time is up
+    const now = Date.now();
+    const sessionStart = new Date(session.startTime).getTime();
+    if (now - sessionStart >= session.duration) {
+      session.completed = true;
+      session.completedAt = new Date();
+      await session.save();
+
+      return res.status(200).json({
+        success: false,
+        message: "Time is up! Session ended.",
+        completed: true,
+        finalScore: session.score,
+        totalQuestions: session.questions.length,
+      });
+    }
+
     // Get current question
     const currentQuestion = session.questions[session.currentQuestionIndex];
 
@@ -115,13 +135,13 @@ export const submitAnswer = async (req: Request, res: Response) => {
     const scoreChange = isCorrect ? 4 : -1;
     session.score += scoreChange;
 
-    // Update question with user's answer if currentQuestion exists
+    // Save the user's answer
     if (currentQuestion) {
       currentQuestion.userAnswer = answerStr;
       currentQuestion.isCorrect = isCorrect;
     }
 
-    //move to the next question or complete the session
+    // Move to the next question or complete session
     if (session.currentQuestionIndex < session.questions.length - 1) {
       session.currentQuestionIndex += 1;
       await session.save();
@@ -136,9 +156,10 @@ export const submitAnswer = async (req: Request, res: Response) => {
         nextQuestion,
         currentIndex: session.currentQuestionIndex,
         completed: false,
+        timeRemaining: session.duration - (now - sessionStart), // ms left
       });
     } else {
-      //complete session
+      // Complete session
       session.completed = true;
       session.completedAt = new Date();
       await session.save();
@@ -162,22 +183,25 @@ export const submitAnswer = async (req: Request, res: Response) => {
   }
 };
 
-async function generateQuestions(track: string): Promise<IQuestion[]> {
-  const model = genAI.getGenerativeModel({ 
+export async function generateQuestions(track: string): Promise<IQuestion[]> {
+  const model = genAI.getGenerativeModel({
     model: "gemini-2.5-pro",
     generationConfig: {
       responseMimeType: "application/json",
     },
   });
 
-  const prompt = `You are an expert technical interviewer. ${TRACK_PROMPTS[track as keyof typeof TRACK_PROMPTS]}
+  const prompt = `You are an expert technical interviewer. ${
+    TRACK_PROMPTS[track as keyof typeof TRACK_PROMPTS]
+  }
   
   Strictly follow these rules:
   1. Generate exactly 20 questions
   2. Each question must have 4 options
   3. Format must be perfect JSON
   4. correctAnswer must be the index (0-3)
-  
+  Only return JSON array as per format. Do not include any text before or after the JSON.
+
   Example format:
   [
     {
@@ -194,29 +218,45 @@ async function generateQuestions(track: string): Promise<IQuestion[]> {
 
     // More robust cleaning of the response
     let cleanText = text.trim();
-    
+
     // Remove markdown code blocks if present
-    if (cleanText.startsWith('```json')) {
-      cleanText = cleanText.slice(7);
+    if (cleanText.startsWith("```json")) {
+      cleanText = cleanText
+        .replace(/^```json\s*/i, "")
+        .replace(/```$/, "")
+        .trim();
     }
-    if (cleanText.endsWith('```')) {
+    if (cleanText.endsWith("```")) {
       cleanText = cleanText.slice(0, -3);
     }
     cleanText = cleanText.trim();
 
+    if (!cleanText || cleanText.length < 5) {
+      throw new Error("Empty or too short AI response");
+    }
+
     // Validate JSON structure
     const questions: IQuestion[] = JSON.parse(cleanText);
-    
+
     if (!Array.isArray(questions) || questions.length !== 20) {
-      throw new Error('Invalid number of questions generated');
+      throw new Error("Invalid number of questions generated");
     }
 
     // Validate each question
     questions.forEach((q, i) => {
-      if (!q.questionText || !q.options || q.options.length !== 4 || !q.correctAnswer) {
+      if (
+        !q.questionText ||
+        !q.options ||
+        q.options.length !== 4 ||
+        !q.correctAnswer
+      ) {
         throw new Error(`Invalid question format at index ${i}`);
       }
-      if (isNaN(parseInt(q.correctAnswer)) || parseInt(q.correctAnswer) < 0 || parseInt(q.correctAnswer) > 3) {
+      if (
+        isNaN(parseInt(q.correctAnswer)) ||
+        parseInt(q.correctAnswer) < 0 ||
+        parseInt(q.correctAnswer) > 3
+      ) {
         throw new Error(`Invalid correctAnswer at question ${i}`);
       }
     });
@@ -226,9 +266,93 @@ async function generateQuestions(track: string): Promise<IQuestion[]> {
       ...q,
       questionId: `q_${Date.now()}_${i}`,
     }));
-    
   } catch (error) {
     console.error("AI question generation failed:", error);
     throw new Error("Failed to generate valid questions. Please try again.");
+  }
+}
+
+export async function getAllTracks(req: Request, res: Response) {
+  try {
+    let tracks: String[];
+
+    if (req.query.from === "db") {
+      //get only tracks that exist in database
+      tracks = await InterviewSession.distinct("track");
+    } else {
+      //get enum values from schema
+      tracks = (InterviewSession.schema.path("track") as any).enumValues;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: tracks,
+    });
+  } catch (error: any) {
+    console.error("Error fetching tracks:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch tracks",
+      error: error.message,
+    });
+  }
+}
+
+export async function getUserSession(req: Request, res: Response) {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Unauthorized: user not logged in" });
+    }
+
+    //fetch all sessions for this user
+    const sessions = await InterviewSession.find({ userId }).sort({
+      startTime: -1,
+    });
+
+    //add correct and incorrect count per session
+    const sessionWithStats = sessions.map((session) => {
+      const correctCount = session.questions.filter((q) => q.isCorrect).length;
+      const incorrectCount = session.questions.filter((q) => q.isCorrect === false).length;
+         return {
+      ...session.toObject(),
+      correctCount,
+      incorrectCount
+    }
+    })
+ 
+    return res.status(200).json({
+      success: true,
+      count: sessions.length,
+      data: sessionWithStats,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch user sessions",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+}
+
+export async function getALlSessions(req: Request , res: Response) {
+  try {
+    const sessions = await InterviewSession.find()
+
+    if(!sessions){
+      return res.status(404).json({message: "No session found"})
+    }
+
+    return res.status(200).json({success: true , count: sessions.length , sessions})
+  } catch (error) {
+        return res.status(500).json({
+      success: false,
+      message: "Failed to fetch all sessions",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+
   }
 }

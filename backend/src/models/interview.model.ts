@@ -6,6 +6,7 @@ export interface IQuestion {
   options: string[];
   correctAnswer: string;
   userAnswer?: string;
+
   isCorrect?: boolean;
 }
 
@@ -14,6 +15,8 @@ export interface IInterviewSession extends Document {
   track: "frontend" | "backend" | "fullstack" | "devops";
   questions: IQuestion[];
   currentQuestionIndex: number;
+  startTime: Date;
+  duration: number;
   score: number;
   completed: boolean;
   createdAt: Date;
@@ -40,6 +43,9 @@ const InterviewSessionSchema = new Schema<IInterviewSession>({
   currentQuestionIndex: { type: Number, default: 0 },
   score: { type: Number, default: 0 },
   completed: { type: Boolean, default: false },
+  startTime: { type: Date, default: Date.now }, // Session starts immediately
+  duration: { type: Number, default: 20 * 60 * 1000 }, // 20 minutes in ms
+
   createdAt: { type: Date, default: Date.now },
   completedAt: { type: Date },
 });
