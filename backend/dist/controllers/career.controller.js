@@ -1,0 +1,188 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.generateCareerPath = void 0;
+const generative_ai_1 = require("@google/generative-ai");
+const user_model_1 = require("../models/user.model");
+const genAI = new generative_ai_1.GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const generateCareerPath = async (req, res) => {
+    try {
+        // Get logged in user ID from middleware
+        const userId = req?.user?.id;
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "Not authenticated" });
+        }
+        // Fetch user profile from db
+        const user = await user_model_1.User.findById(userId).select("skills experience careerGoal interest");
+        if (!user) {
+            return res.status(404).json({ success: true, message: "User not found" });
+        }
+        const { skills, experience, careerGoal } = user;
+        if (!skills || !experience || !careerGoal) {
+            return res.status(400).json({
+                success: false,
+                message: "User profile is incomplete. Please provide skills, experience, and career goals."
+            });
+        }
+        const prompt = `
+You are an experienced career coach and professional mentor with deep knowledge of global job markets, skills demand trends, and learning resources.
+
+Based on the following user details:
+- Current Skills: ${skills}
+- Years of Experience: ${experience}
+- Career Goal / Target Role: ${careerGoal}
+
+Create a comprehensive, realistic career roadmap with the following requirements:
+
+1. MILESTONES (4-6 stages)
+   - Format each as: "Stage [X]: [Descriptive Title]"
+   - Description should be 2-3 detailed paragraphs
+   - Estimated time format: "[X-Y] Months" or "[First X months in role]"
+   - Dependencies should list prerequisites clearly
+
+2. SKILLS (8-12 skills)
+   - Mix of technical and soft skills
+   - Importance should explain relevance to the career goal
+   - Levels: Foundational, Intermediate, or Advanced
+   - For technical skills, mention specific technologies/languages
+
+3. COURSES (4-6 recommendations)
+   - Include both free and paid options
+   - Providers: Coursera, Udemy, edX, Pluralsight, official docs, etc.
+   - Cost format: "Free" or "Paid (~$X)" 
+   - Include direct links when possible
+
+4. JOB TITLES (5-8 positions)
+   - Progressive titles from entry-level to target role
+   - Include common variations for the same role
+
+5. TIPS (6-8 actionable items)
+   - Focus on practical, specific advice
+   - Include portfolio, networking, interview prep, etc.
+   - Use markdown bold (**) for key phrases
+
+OUTPUT REQUIREMENTS:
+- Return STRICT JSON only (no markdown, no extra text)
+- Use exactly this structure:
+{
+  "roadmap": {
+    "milestones": [
+      {
+        "stage": "Stage 1: [Title]",
+        "description": "[Detailed description]",
+        "estimated_time": "[Timeframe]",
+        "dependencies": "[Prerequisites]"
+      }
+    ],
+    "skills": [
+      {
+        "name": "[Skill Name]",
+        "importance": "[Why it matters]",
+        "level": "Foundational/Intermediate/Advanced"
+      }
+    ],
+    "courses": [
+      {
+        "name": "[Course Name]",
+        "provider": "[Provider]",
+        "cost": "Free/Paid",
+        "link": "[URL]"
+      }
+    ],
+    "jobs": ["Job Title 1", "Job Title 2"],
+    "tips": [
+      "**Actionable tip** with details",
+      "Another **specific suggestion**"
+    ]
+  }
+}
+
+EXAMPLE STRUCTURE (for reference only):
+{
+  "roadmap": {
+    "milestones": [
+      {
+        "stage": "Stage 1: Solidify Foundations",
+        "description": "Begin with...",
+        "estimated_time": "0-3 Months",
+        "dependencies": "Basic programming knowledge"
+      }
+    ],
+    "skills": [
+      {
+        "name": "Python Programming",
+        "importance": "Essential for data analysis...",
+        "level": "Foundational"
+      }
+    ],
+    "courses": [
+      {
+        "name": "Python for Beginners",
+        "provider": "Coursera",
+        "cost": "Free",
+        "link": "https://example.com"
+      }
+    ],
+    "jobs": ["Junior Developer", "Software Engineer"],
+    "tips": [
+      "**Build a portfolio** with at least 3 projects",
+      "**Network actively** on LinkedIn with professionals"
+    ]
+  }
+}
+`;
+        // Get the Gemini Pro model
+        const model = genAI.getGenerativeModel({
+            model: "gemini-2.5-flash",
+            generationConfig: {
+                responseMimeType: "application/json",
+            },
+        });
+        // Generate content
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+        // Parse and validate the response
+        let jsonResponse;
+        try {
+            // Clean the response (remove potential markdown wrappers)
+            const cleanText = text.replace(/```json|```/g, "").trim();
+            jsonResponse = JSON.parse(cleanText);
+            // Validate the response structure
+            if (!jsonResponse.roadmap ||
+                !Array.isArray(jsonResponse.roadmap.milestones) ||
+                !Array.isArray(jsonResponse.roadmap.skills)) {
+                throw new Error("Invalid response structure from AI");
+            }
+            // Additional formatting checks
+            jsonResponse.roadmap.milestones.forEach(milestone => {
+                if (!milestone.stage.includes("Stage")) {
+                    milestone.stage = `Stage ${milestone.stage}`;
+                }
+            });
+        }
+        catch (e) {
+            console.error("Failed to parse or validate Gemini response:", e);
+            return res.status(500).json({
+                success: false,
+                message: "Failed to generate a valid career path. Please try again.",
+                error: e.message
+            });
+        }
+        // Successful response
+        res.status(200).json({
+            success: true,
+            message: "Career roadmap generated successfully",
+            ...jsonResponse
+        });
+    }
+    catch (error) {
+        console.error("Error generating career path:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error while generating career path",
+            error: error.message
+        });
+    }
+};
+exports.generateCareerPath = generateCareerPath;
+//# sourceMappingURL=career.controller.js.map
