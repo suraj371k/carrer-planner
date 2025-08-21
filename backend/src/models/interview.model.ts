@@ -14,6 +14,7 @@ export interface IInterviewSession extends Document {
   userId: Schema.Types.ObjectId;
   track: "frontend" | "backend" | "fullstack" | "devops";
   questions: IQuestion[];
+  speechQuestions: Schema.Types.ObjectId[];
   currentQuestionIndex: number;
   startTime: Date;
   duration: number;
@@ -40,6 +41,7 @@ const InterviewSessionSchema = new Schema<IInterviewSession>({
     enum: ["frontend", "backend", "fullstack", "devops"],
   },
   questions: { type: [QuestionSchema], required: true },
+  speechQuestions: [{ type: Schema.Types.ObjectId, ref: "SpeechQuestion" }],
   currentQuestionIndex: { type: Number, default: 0 },
   score: { type: Number, default: 0 },
   completed: { type: Boolean, default: false },
