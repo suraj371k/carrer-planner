@@ -13,18 +13,41 @@ declare global {
 }
 
 export const authenticate = (req: Request, res: Response, next: NextFunction) => {
-  const token = req.cookies?.token; // Make sure `cookie-parser` is used in server.ts
+  // Try to get token from multiple sources
+  let token = req.cookies?.token; // From cookies
+  
+  // If no token in cookies, check Authorization header
+  if (!token) {
+    const authHeader = req.header('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.replace('Bearer ', '');
+    }
+  }
+
+  // Debug logging (remove in production)
+  console.log("Token from cookies:", req.cookies?.token);
+  console.log("Token from header:", req.header('Authorization'));
+  console.log("Final token:", token);
 
   if (!token) {
-    return res.status(401).json({ message: "Authentication required" });
+    return res.status(401).json({ 
+      success: false,
+      message: "Authentication required - no token provided" 
+    });
   }
 
   try {
     // Verify the token
     const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
-    req.user = decoded; // Attach user data to the request
+    console.log("Decoded token:", decoded); // Debug log
+    
+    req.user = { id: decoded.id }; // Attach user data to the request
     next();
   } catch (err) {
-    return res.status(401).json({ message: "Invalid or expired token" });
+    console.log("Token verification error:", err); // Debug log
+    return res.status(401).json({ 
+      success: false,
+      message: "Invalid or expired token" 
+    });
   }
 };

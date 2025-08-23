@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { User } from "../models/user.model";
+import { CareerRoadmap } from "../models/career.model"; 
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -33,7 +34,7 @@ export const generateCareerPath = async (req: Request, res: Response) => {
   try {
     // Get logged in user ID from middleware
     const userId = req?.user?.id;
-
+ 
     if (!userId) {
       return res.status(401).json({ success: false, message: "Not authenticated" });
     }
@@ -51,6 +52,28 @@ export const generateCareerPath = async (req: Request, res: Response) => {
         success: false,
         message: "User profile is incomplete. Please provide skills, experience, and career goals."
       });
+    }
+
+    // Check if user already has a recent roadmap (optional - you can skip this)
+    const existingRoadmap = await CareerRoadmap.findOne({ userId })
+      .sort({ createdAt: -1 });
+
+    // If you want to prevent generating multiple roadmaps within a certain timeframe
+    if (existingRoadmap) {
+      const hoursDiff = (Date.now() - existingRoadmap.createdAt.getTime()) / (1000 * 60 * 60);
+      if (hoursDiff < 24) { // Allow new roadmap only after 24 hours
+        return res.status(200).json({
+          success: true,
+          message: "Using existing career roadmap",
+          roadmap: {
+            milestones: existingRoadmap.milestones,
+            skills: existingRoadmap.skills,
+            courses: existingRoadmap.courses,
+            jobs: existingRoadmap.jobs,
+            tips: existingRoadmap.tips,
+          }
+        });
+      }
     }
 
     const prompt = `
@@ -71,7 +94,7 @@ Create a comprehensive, realistic career roadmap with the following requirements
 
 2. SKILLS (8-12 skills)
    - Mix of technical and soft skills
-   - Importance should explain relevance to the career goal
+   - Importance should be critical , high and medium in one words
    - Levels: Foundational, Intermediate, or Advanced
    - For technical skills, mention specific technologies/languages
 
@@ -204,6 +227,30 @@ EXAMPLE STRUCTURE (for reference only):
       });
     }
 
+    // Save the roadmap to database
+    try {
+      const savedRoadmap = new CareerRoadmap({
+        userId: userId,
+        milestones: jsonResponse.roadmap.milestones,
+        skills: jsonResponse.roadmap.skills,
+        courses: jsonResponse.roadmap.courses,
+        jobs: jsonResponse.roadmap.jobs,
+        tips: jsonResponse.roadmap.tips,
+        userProfile: {
+          skills: skills,
+          experience: experience,
+          careerGoal: careerGoal
+        }
+      });
+
+      await savedRoadmap.save();
+      console.log("Career roadmap saved to database successfully");
+
+    } catch (saveError: any) {
+      console.error("Error saving roadmap to database:", saveError);
+      // Continue with response even if save fails
+    }
+
     // Successful response
     res.status(200).json({
       success: true,
@@ -216,6 +263,72 @@ EXAMPLE STRUCTURE (for reference only):
     res.status(500).json({ 
       success: false,
       message: "Internal server error while generating career path",
+      error: error.message
+    });
+  }
+};
+
+// Additional controller to get user's roadmap history
+export const getUserRoadmaps = async (req: Request, res: Response) => {
+  try {
+    const userId = req?.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Not authenticated" });
+    }
+
+    const roadmaps = await CareerRoadmap.find({ userId })
+      .sort({ createdAt: -1 })
+      .select("-__v")
+      .limit(10); // Get last 10 roadmaps
+
+    res.status(200).json({
+      success: true,
+      roadmaps: roadmaps
+    });
+
+  } catch (error: any) {
+    console.error("Error fetching user roadmaps:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Error fetching roadmap history",
+      error: error.message
+    });
+  }
+};
+
+// Controller to get a specific roadmap by ID
+export const getRoadmapById = async (req: Request, res: Response) => {
+  try {
+    const userId = req?.user?.id;
+    const { roadmapId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Not authenticated" });
+    }
+
+    const roadmap = await CareerRoadmap.findOne({ 
+      _id: roadmapId, 
+      userId: userId 
+    }).select("-__v");
+
+    if (!roadmap) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Roadmap not found" 
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      roadmap: roadmap
+    });
+
+  } catch (error: any) {
+    console.error("Error fetching roadmap:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Error fetching roadmap",
       error: error.message
     });
   }

@@ -28,7 +28,7 @@ app.get("/", (req: Request, res: Response) => {
 
 //routes
 app.use('/api/users' , userRoutues)
-app.use('/api/ai' , careerRoutes)
+app.use('/api/career' , careerRoutes)
 app.use('/api/jobs' , jobRoutes)
 app.use('/api/interview' , interviewRoutes)
 
