@@ -119,7 +119,7 @@ export const analyzeResumeWithGemini = async (resumeText: string) => {
   }
 };
 
-export const uploadResume = async (req: Request, res: Response) => {
+export const analyzeResume = async (req: Request, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });

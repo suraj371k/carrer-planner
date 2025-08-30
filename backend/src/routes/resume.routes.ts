@@ -2,11 +2,11 @@ import express from "express";
 import { upload } from "../middleware/multer";
 import { authenticate } from "../middleware/authenticate";
 import {
-  uploadResume,
   getUserResumes,
   getResumeById,
   deleteResume,
   getResumeAnalytics,
+  analyzeResume,
 } from "../controllers/resume.controller";
 
 const router = express.Router();
@@ -15,7 +15,7 @@ const router = express.Router();
 router.use(authenticate);
 
 // Upload and analyze resume
-router.post("/upload", upload.single("resume"), uploadResume);
+router.post("/upload", upload.single("resume"), analyzeResume);
 
 // Get user's resume analysis history
 router.get("/", getUserResumes);
