@@ -40,7 +40,7 @@ export default function PracticePage() {
           onSuccess: (data) => {
             setSessionId(data.sessionId);
             setCurrentQuestion(data.currentQuestion);
-            setCurrentIndex(data.currentIdex);
+            setCurrentIndex(data.currentIndex);
             setScore(0);
             // Defensive conversion for startTime
             setStartTime(
