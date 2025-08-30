@@ -10,11 +10,13 @@ import userRoutues from './routes/user.routes'
 import careerRoutes from './routes/career.routes'
 import jobRoutes from './routes/jobs.routes'
 import interviewRoutes from './routes/interview.routes'
+import resumeRoutes from './routes/resume.routes'
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
+
 app.use(cookieParser());
 app.use(cors({
     origin: process.env.CLIENT_URL || "http://localhost:3000",
@@ -31,6 +33,7 @@ app.use('/api/users' , userRoutues)
 app.use('/api/career' , careerRoutes)
 app.use('/api/jobs' , jobRoutes)
 app.use('/api/interview' , interviewRoutes)
+app.use('/api/resume' , resumeRoutes)
 
 
 // Connect to MongoDB

@@ -11,16 +11,15 @@ export const createUser = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // ✅ Ensure email is indexed in MongoDB
     const existingUser = await User.findOne({ email }).select("_id");
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // ✅ Hash password securely
+    //  Hash password securely
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ Insert user
+    // Insert user
     const user = await User.create({
       name,
       email,
@@ -118,3 +117,4 @@ export const getUserProfile = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+

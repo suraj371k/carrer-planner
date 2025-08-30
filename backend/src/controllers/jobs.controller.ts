@@ -23,6 +23,42 @@ function normalizeLinkedInUrl(url: string | undefined): string {
   return cleanUrl;
 }
 
+// Enhanced function to check if job is within 3 days
+function isRecentJob(postedWhen: string): boolean {
+  if (!postedWhen) return false;
+  
+  const postedText = postedWhen.toLowerCase().trim();
+  
+  // Immediate matches for very recent jobs
+  if (postedText.includes('just now') || 
+      postedText.includes('minutes ago') || 
+      postedText.includes('an hour ago') ||
+      postedText.includes('hours ago') ||
+      postedText.includes('today') ||
+      postedText.includes('yesterday')) {
+    return true;
+  }
+  
+  // Check for specific day patterns
+  if (postedText.includes('day') || postedText.includes('days')) {
+    const dayMatch = postedText.match(/(\d+)\s*days?\s*ago/);
+    if (dayMatch) {
+      const daysAgo = parseInt(dayMatch[1]);
+      return daysAgo <= 3;
+    }
+    
+    // Handle "1 day ago", "2 days ago" etc.
+    const singleDayMatch = postedText.match(/(\d+)\s*day/);
+    if (singleDayMatch) {
+      const daysAgo = parseInt(singleDayMatch[1]);
+      return daysAgo <= 3;
+    }
+  }
+  
+  // If we can't determine the date, assume it might be recent
+  return false;
+}
+
 // Enhanced matching algorithm
 function calculateMatchScore(title: string, company: string, user: any): number {
   if (!title || !user) return 0;
@@ -91,7 +127,6 @@ function calculateMatchScore(title: string, company: string, user: any): number 
   return score;
 }
 
-// Alternative scraping approach with multiple selectors
 function extractJobsFromHtml($: cheerio.CheerioAPI, user: any): any[] {
   const jobs: any[] = [];
   
@@ -109,7 +144,6 @@ function extractJobsFromHtml($: cheerio.CheerioAPI, user: any): any[] {
       try {
         const jobElement = $(elem);
         
-        // Try multiple title selectors
         const titleSelectors = [
           'h3.base-search-card__title',
           'h3.job-search-card__title',
@@ -124,7 +158,6 @@ function extractJobsFromHtml($: cheerio.CheerioAPI, user: any): any[] {
           if (title) break;
         }
 
-        // Try multiple company selectors
         const companySelectors = [
           'h4.base-search-card__subtitle a',
           '.job-search-card__subtitle-primary-grouping .job-search-card__subtitle',
@@ -153,7 +186,6 @@ function extractJobsFromHtml($: cheerio.CheerioAPI, user: any): any[] {
           if (location) break;
         }
 
-        // Try multiple link selectors
         const linkSelectors = [
           'a.base-card__full-link',
           '.result-card__full-card-link',
@@ -167,21 +199,24 @@ function extractJobsFromHtml($: cheerio.CheerioAPI, user: any): any[] {
           if (rawLink) break;
         }
 
-        // Try multiple date selectors
+        // Enhanced date selectors
         const dateSelectors = [
           'time.job-search-card__listdate',
           'time.job-search-card__listdate--new',
           '.result-card__listdate',
+          'time[datetime]',
+          '.job-result-card__listdate',
+          '[data-tracking-control-name="public_jobs_jserp-result_job-search-card-date"]',
           'time'
         ];
         
         let postedWhen = '';
         for (const dateSel of dateSelectors) {
-          postedWhen = jobElement.find(dateSel).text().trim();
+          const dateElement = jobElement.find(dateSel);
+          postedWhen = dateElement.text().trim() || dateElement.attr('datetime') || '';
           if (postedWhen) break;
         }
 
-        // Only add job if we have minimum required data
         if (title && company) {
           const jobData = {
             title,
@@ -189,10 +224,10 @@ function extractJobsFromHtml($: cheerio.CheerioAPI, user: any): any[] {
             location: location || "Remote",
             link: normalizeLinkedInUrl(rawLink),
             postedWhen: postedWhen || "Recently",
-            matchScore: calculateMatchScore(title, company, user)
+            matchScore: calculateMatchScore(title, company, user),
+            isRecent: isRecentJob(postedWhen)
           };
 
-          // Check if this job already exists
           const exists = jobs.some(existingJob => 
             existingJob.title === jobData.title && 
             existingJob.company === jobData.company
@@ -213,28 +248,29 @@ function extractJobsFromHtml($: cheerio.CheerioAPI, user: any): any[] {
 
 export const jobs = async (req: Request, res: Response) => {
   try {
-    // 1. Get user data
     const user = await User.findById(req.user?.id).select("-password");
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    // 2. Prepare keywords - make them more targeted
     const skills = user.skills?.split(",").map(skill => skill.trim()).filter(Boolean) || [];
     const careerGoal = user.careerGoal || "";
     const keywords = [...skills.slice(0, 5), careerGoal].filter(Boolean).join(" ");
 
-    // 3. Try different LinkedIn endpoints
+    // Enhanced search URLs with date filtering parameters
     const searchUrls = [
+      // Recent jobs filter - f_TPR=r86400 means last 24 hours, r259200 means last 3 days
+      `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(keywords)}&location=Worldwide&geoId=92000000&f_TPR=r259200&sortBy=DD`,
+      `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(keywords)}&location=Worldwide&f_TPR=r259200`,
+      `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=${encodeURIComponent(keywords)}&location=Worldwide&start=0&f_TPR=r259200`,
+      `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(careerGoal)}&f_TPR=r259200&sortBy=DD`,
+      // Fallback without date filter
       `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(keywords)}&location=Worldwide&geoId=92000000`,
-      `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=${encodeURIComponent(keywords)}&location=Worldwide&start=0`,
-      `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(careerGoal)}`
     ];
 
     let jobs: any[] = [];
     let successfulUrl = '';
 
-    // 4. Enhanced request configuration with better headers
     const headers = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -249,22 +285,20 @@ export const jobs = async (req: Request, res: Response) => {
       'Cache-Control': 'max-age=0',
     };
 
-    // Try different URLs until one works
     for (const searchUrl of searchUrls) {
       try {
         console.log(`Trying URL: ${searchUrl}`);
         
         const response = await axios.get(searchUrl, {
           headers,
-          timeout: 20000,
+          timeout: 25000,
           maxRedirects: 5,
-          validateStatus: (status) => status < 500, // Accept 4xx errors
+          validateStatus: (status) => status < 500, 
         });
 
         console.log(`Response status: ${response.status}`);
         console.log(`Response length: ${response.data.length}`);
 
-        // Check for anti-bot measures
         if (response.data.includes('security challenge') || 
             response.data.includes('unusual activity') ||
             response.data.includes('CAPTCHA') ||
@@ -289,9 +323,7 @@ export const jobs = async (req: Request, res: Response) => {
       }
     }
 
-    // 5. If no jobs found through scraping, provide fallback
     if (jobs.length === 0) {
-      // Create some mock jobs based on user profile for demonstration
       const mockJobs = [
         {
           title: `${careerGoal} Position`,
@@ -300,6 +332,7 @@ export const jobs = async (req: Request, res: Response) => {
           link: "https://www.linkedin.com/jobs/search/",
           postedWhen: "Recently",
           matchScore: 25,
+          isRecent: true,
           note: "Scraping currently limited - please visit LinkedIn directly"
         }
       ];
@@ -311,13 +344,14 @@ export const jobs = async (req: Request, res: Response) => {
           keywordUsed: keywords,
           totalFound: 0,
           relevantCount: 0,
+          recentCount: 0,
           searchUrl: successfulUrl || searchUrls[0],
           note: "LinkedIn scraping is currently limited. Please visit the search URL directly."
         }
       });
     }
 
-    // 6. Process and filter jobs
+    // Process and filter jobs
     const uniqueJobs = jobs.filter((job, index, self) =>
       index === self.findIndex((j) => (
         j.title.toLowerCase() === job.title.toLowerCase() && 
@@ -325,22 +359,30 @@ export const jobs = async (req: Request, res: Response) => {
       ))
     );
 
-    // Lower the threshold to get more results
-    const relevantJobs = uniqueJobs
-      .filter(job => job.matchScore >= 5) // Lowered from 20 to 5
-      .sort((a, b) => b.matchScore - a.matchScore)
+    // Filter for recent jobs (less than 3 days) AND relevant jobs
+    const recentRelevantJobs = uniqueJobs
+      .filter(job => job.isRecent && job.matchScore >= 5)
+      .sort((a, b) => b.matchScore - a.matchScore);
 
-    // 7. Enhanced response
+    // If no recent jobs found, get all recent jobs regardless of match score
+    const fallbackRecentJobs = uniqueJobs
+      .filter(job => job.isRecent)
+      .sort((a, b) => b.matchScore - a.matchScore);
+
+    const finalJobs = recentRelevantJobs.length > 0 ? recentRelevantJobs : fallbackRecentJobs;
+
     res.json({
       success: true,
-      jobs: relevantJobs,
+      jobs: finalJobs,
       meta: {
         keywordUsed: keywords,
         totalFound: jobs.length,
-        relevantCount: relevantJobs.length,
+        relevantCount: uniqueJobs.filter(job => job.matchScore >= 5).length,
+        recentCount: uniqueJobs.filter(job => job.isRecent).length,
+        finalCount: finalJobs.length,
         searchUrl: successfulUrl || searchUrls[0],
         scrapingStatus: jobs.length > 0 ? "successful" : "limited",
-        advice: "For best results, visit LinkedIn directly using the provided search URL"
+        filterApplied: "Recent jobs (≤ 3 days)",
       }
     });
 
@@ -349,7 +391,7 @@ export const jobs = async (req: Request, res: Response) => {
     
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch jobs from LinkedIn',
+      message: 'Failed to fetch recent jobs from LinkedIn',
       error: error instanceof Error ? error.message : 'Unknown error',
       solution: [
         'LinkedIn has strong anti-scraping measures',

@@ -88,7 +88,7 @@ Create a comprehensive, realistic career roadmap with the following requirements
 
 1. MILESTONES (4-6 stages)
    - Format each as: "Stage [X]: [Descriptive Title]"
-   - Description should be 2-3 detailed paragraphs
+   - list skills topics and subtopics like ex-hooks topic ,  usestate , useCallback hook etc.
    - Estimated time format: "[X-Y] Months" or "[First X months in role]"
    - Dependencies should list prerequisites clearly
 

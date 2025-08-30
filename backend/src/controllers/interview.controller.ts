@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Request, Response } from "express";
 import { InterviewSession, IQuestion } from "../models/interview.model";
+import { User } from "../models/user.model";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -44,12 +45,22 @@ export const startInterview = async (req: Request, res: Response) => {
     const { track } = req.body;
     const userId = req.user?.id;
 
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
     if (!["frontend", "backend", "fullstack", "devops"].includes(track)) {
       return res.status(400).json({
         success: false,
         message: "Invalid track specified",
       });
     }
+
+
 
     const questions = await generateQuestions(track);
 
@@ -62,6 +73,9 @@ export const startInterview = async (req: Request, res: Response) => {
       duration: 20 * 60 * 1000, // 20 min in ms
     });
 
+    // Update user test count
+    user.testsTakenToday += 1;
+    await user.save();
     await session.save();
 
     res.status(201).json({
@@ -132,7 +146,7 @@ export const submitAnswer = async (req: Request, res: Response) => {
     const isCorrect = currentQuestion?.correctAnswer === answerStr;
 
     // Update score (+4 for correct, -1 for wrong)
-    const scoreChange = isCorrect ? 4 : -1;
+    const scoreChange = isCorrect ? 5 : -1;
     session.score += scoreChange;
 
     // Save the user's answer
@@ -316,14 +330,16 @@ export async function getUserSession(req: Request, res: Response) {
     //add correct and incorrect count per session
     const sessionWithStats = sessions.map((session) => {
       const correctCount = session.questions.filter((q) => q.isCorrect).length;
-      const incorrectCount = session.questions.filter((q) => q.isCorrect === false).length;
-         return {
-      ...session.toObject(),
-      correctCount,
-      incorrectCount
-    }
-    })
- 
+      const incorrectCount = session.questions.filter(
+        (q) => q.isCorrect === false
+      ).length;
+      return {
+        ...session.toObject(),
+        correctCount,
+        incorrectCount,
+      };
+    });
+
     return res.status(200).json({
       success: true,
       count: sessions.length,
@@ -338,21 +354,24 @@ export async function getUserSession(req: Request, res: Response) {
   }
 }
 
-export async function getALlSessions(req: Request , res: Response) {
+export async function getALlSessions(req: Request, res: Response) {
   try {
-    const sessions = await InterviewSession.find()
+    const sessions = await InterviewSession.find();
 
-    if(!sessions){
-      return res.status(404).json({message: "No session found"})
+    if (!sessions) {
+      return res.status(404).json({ message: "No session found" });
     }
 
-    return res.status(200).json({success: true , count: sessions.length , sessions})
+    return res
+      .status(200)
+      .json({ success: true, count: sessions.length, sessions });
   } catch (error) {
-        return res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to fetch all sessions",
       error: error instanceof Error ? error.message : "Unknown error",
     });
-
   }
 }
+
+

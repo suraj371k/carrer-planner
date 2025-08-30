@@ -6,30 +6,27 @@ export interface IUser extends Document {
   password: string;
   skills: string;
   experience: string;
-  careerGoal:
-    | "Frontend Developer"
-    | "Full Stack Developer"
-    | "Backend Developer"
-    | "Data Scientist"
-    | "AI Engineer"
-    | "Cybersecurity Engineer"
-    | "DevOps Engineer"
-    | "UI/UX Designer"
-    | string;
+  testsTakenToday: number;
+  lastTestDate: Date | null;
+  careerGoal: string;
 }
 
 const UserSchema = new Schema<IUser>(
   {
     name: { type: String, required: true },
-    email: { type: String, required: true, unique: true  , index: true},
+    email: { type: String, required: true, unique: true, index: true },
     password: { type: String, required: true },
-    skills: { type: String, default:"" },
-    experience: {type: String , required: true},
+    skills: { type: String, default: "" },
+    experience: { type: String, required: true },
+
+    testsTakenToday: { type: Number, default: 0 },
+    lastTestDate: { type: Date, default: null },
+
     careerGoal: {
       type: String,
       enum: [
         "Frontend Developer",
-        "Full Stack Developer", 
+        "Full Stack Developer",
         "Backend Developer",
         "Data Scientist",
         "AI Engineer",
@@ -37,8 +34,8 @@ const UserSchema = new Schema<IUser>(
         "DevOps Engineer",
         "UI/UX Designer",
       ],
-      required: true
-    }
+      required: true,
+    },
   },
   { timestamps: true }
 );
