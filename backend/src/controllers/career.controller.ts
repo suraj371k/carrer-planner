@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { User } from "../models/user.model";
 import { CareerRoadmap } from "../models/career.model"; 
-
+  
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 // Interface for the expected response structure
