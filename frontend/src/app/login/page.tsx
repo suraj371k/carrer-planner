@@ -8,6 +8,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { Suspense } from "react";
+
 
 const LoginPage = () => {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -34,6 +36,7 @@ const LoginPage = () => {
   };
 
   return (
+    <Suspense fallback={<div>Loading...</div>}>
     <div className="min-h-[80vh] flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 px-4">
       <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
         <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">
@@ -97,6 +100,7 @@ const LoginPage = () => {
         </div>
       </div>
     </div>
+    </Suspense>
   );
 };
 
