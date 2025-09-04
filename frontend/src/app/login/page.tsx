@@ -6,15 +6,11 @@ import { Label } from "@/components/ui/label";
 import { useLogin } from "@/hooks/useAuth";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import toast from "react-hot-toast";
-import { Suspense } from "react";
 
-
-const LoginPage = () => {
-  const [form, setForm] = useState({ email: "", password: "" });
-  const login = useLogin();
-
+// Child component that safely uses useSearchParams
+function LoginToast() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -24,10 +20,16 @@ const LoginPage = () => {
     }
   }, [searchParams]);
 
+  return null; // no UI, just side effect
+}
+
+const LoginPage = () => {
+  const [form, setForm] = useState({ email: "", password: "" });
+  const login = useLogin();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       await login.mutateAsync(form);
     } catch (error) {
@@ -36,8 +38,12 @@ const LoginPage = () => {
   };
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
     <div className="min-h-[80vh] flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 px-4">
+      {/* Wrap only the searchParams logic in Suspense */}
+      <Suspense fallback={null}>
+        <LoginToast />
+      </Suspense>
+
       <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
         <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">
           Welcome Back 👋
@@ -55,7 +61,7 @@ const LoginPage = () => {
               id="email"
               type="email"
               value={form.email}
-              onChange={(e) => setForm({...form, email: e.target.value})}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
               required
               placeholder="you@example.com"
               className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -73,7 +79,7 @@ const LoginPage = () => {
               id="password"
               type="password"
               value={form.password}
-              onChange={(e) => setForm({...form, password: e.target.value})}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
               required
               placeholder="••••••••"
               className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -100,7 +106,6 @@ const LoginPage = () => {
         </div>
       </div>
     </div>
-    </Suspense>
   );
 };
 
