@@ -26,11 +26,8 @@ export default function PracticePage() {
   const [completed, setCompleted] = useState<boolean>(false);
   const [score, setScore] = useState<number>(0);
   const [loadingTopic, setLoadingTopic] = useState<string | null>(null);
-  const [startTime, setStartTime] = useState<number | null>(null);
-  const [duration, setDuration] = useState<number | null>(null);
-  const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  // Handle topic click → start interview
+
   const handleStartInterview = async (topic: string) => {
     setLoadingTopic(topic);
     try {
@@ -40,22 +37,8 @@ export default function PracticePage() {
           onSuccess: (data) => {
             setSessionId(data.sessionId);
             setCurrentQuestion(data.currentQuestion);
-            setCurrentIndex(data.currentIndex);
+            setCurrentIndex(data.currentIndex ?? 0);
             setScore(0);
-            // Defensive conversion for startTime
-            setStartTime(
-              typeof data.startTime === "string"
-                ? new Date(data.startTime).getTime()
-                : data.startTime instanceof Date
-                ? data.startTime.getTime()
-                : Number(data.startTime)
-            );
-            // Ensure duration is in milliseconds (if seconds, multiply by 1000)
-            setDuration(
-              typeof data.duration === "number"
-                ? data.duration
-                : Number(data.duration)
-            );
             setCompleted(false);
           },
         }
@@ -84,28 +67,6 @@ export default function PracticePage() {
       }
     );
   };
-
-useEffect(() => {
-  if (!startTime || !duration) return;
-
-  if (intervalRef.current) clearInterval(intervalRef.current);
-
-  intervalRef.current = setInterval(() => {
-    const elapsed = Date.now() - startTime;
-    const remaining = duration - elapsed;
-    console.log({ startTime, duration, elapsed, remaining }); // Debug log
-    setTimeRemaining(Math.max(remaining, 0));
-
-    if (remaining <= 0) {
-      clearInterval(intervalRef.current!);
-      setCompleted(true); // auto-complete when time is up
-    }
-  }, 1000);
-
-  return () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-  };
-}, [startTime, duration]);
 
 
   const handleRestart = () => {
@@ -170,7 +131,6 @@ useEffect(() => {
                 question={currentQuestion}
                 currentIndex={currentIndex}
                 score={score}
-                timeRemaining={timeRemaining}
                 onSubmitAnswer={handleSubmitAnswer}
                 isSubmitting={submitAnswer.isPending}
               />

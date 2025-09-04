@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Trophy, Star, RotateCcw, TrendingUp } from "lucide-react"
+import { useRouter } from "next/router"
 
 interface CompletionCardProps {
   score: number
@@ -17,7 +18,7 @@ export function CompletionCard({ score, onRestart }: CompletionCardProps) {
     if (score >= 60) return "text-yellow-500"
     return "text-red-500"
   }
-
+    const router = useRouter()
   const getScoreMessage = (score: number) => {
     if (score >= 90) return "Outstanding! You're interview-ready!"
     if (score >= 80) return "Excellent work! Just a bit more practice."
@@ -91,7 +92,12 @@ export function CompletionCard({ score, onRestart }: CompletionCardProps) {
               Start New Interview
             </Button>
 
-            <Button variant="outline" size="lg" className="flex items-center gap-2 bg-transparent">
+            <Button
+              onClick={() => router.push('/dashboard')}
+              variant="outline"
+              size="lg"
+              className="flex items-center gap-2 bg-transparent"
+            >
               <TrendingUp className="h-4 w-4" />
               View Progress
             </Button>

@@ -42,20 +42,17 @@ function isRecentJob(postedWhen: string): boolean {
   // Check for specific day patterns
   if (postedText.includes('day') || postedText.includes('days')) {
     const dayMatch = postedText.match(/(\d+)\s*days?\s*ago/);
-    if (dayMatch) {
-      const daysAgo = parseInt(dayMatch[1]);
+    if (dayMatch && typeof dayMatch[1] === 'string') {
+      const daysAgo = parseInt(dayMatch[1], 10);
       return daysAgo <= 3;
     }
-    
-    // Handle "1 day ago", "2 days ago" etc.
     const singleDayMatch = postedText.match(/(\d+)\s*day/);
     if (singleDayMatch) {
-      const daysAgo = parseInt(singleDayMatch[1]);
+      const daysAgo = parseInt(singleDayMatch[1]!);
       return daysAgo <= 3;
     }
   }
   
-  // If we can't determine the date, assume it might be recent
   return false;
 }
 
@@ -287,7 +284,6 @@ export const jobs = async (req: Request, res: Response) => {
 
     for (const searchUrl of searchUrls) {
       try {
-        console.log(`Trying URL: ${searchUrl}`);
         
         const response = await axios.get(searchUrl, {
           headers,
@@ -296,15 +292,12 @@ export const jobs = async (req: Request, res: Response) => {
           validateStatus: (status) => status < 500, 
         });
 
-        console.log(`Response status: ${response.status}`);
-        console.log(`Response length: ${response.data.length}`);
 
         if (response.data.includes('security challenge') || 
             response.data.includes('unusual activity') ||
             response.data.includes('CAPTCHA') ||
             response.data.includes('blocked') ||
             response.status === 429) {
-          console.log('Anti-bot detection triggered, trying next URL...');
           continue;
         }
 
@@ -313,12 +306,10 @@ export const jobs = async (req: Request, res: Response) => {
         
         if (jobs.length > 0) {
           successfulUrl = searchUrl;
-          console.log(`Successfully scraped ${jobs.length} jobs from: ${searchUrl}`);
           break;
         }
 
       } catch (error) {
-        console.error(`Error with URL ${searchUrl}:`, error instanceof Error ? error.message : error);
         continue;
       }
     }

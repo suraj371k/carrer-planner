@@ -1,7 +1,22 @@
-import React from 'react';
-import { useResume } from '@/hooks/useResume';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Progress } from '../ui/progress';
+import React from "react";
+import { useResume } from "@/hooks/useResume";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Progress } from "../ui/progress";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
 
 const Analytics = () => {
   const { analytics, isLoadingAnalytics, analyticsError } = useResume();
@@ -22,8 +37,18 @@ const Analytics = () => {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="text-red-600 mb-4">
-            <svg className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            <svg
+              className="h-12 w-12 mx-auto"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+              />
             </svg>
           </div>
           <p className="text-red-600 font-medium">Failed to load analytics</p>
@@ -38,57 +63,158 @@ const Analytics = () => {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="text-gray-400 mb-4">
-            <svg className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            <svg
+              className="h-12 w-12 mx-auto"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No Analytics Available</h3>
-          <p className="text-gray-500">Upload and analyze your first resume to see detailed analytics.</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No Analytics Available
+          </h3>
+          <p className="text-gray-500">
+            Upload and analyze your first resume to see detailed analytics.
+          </p>
         </div>
       </div>
     );
   }
 
+  const sectionData = Object.entries(analytics.sectionAverages).map(
+    ([section, score]) => ({
+      section: section.replace(/([A-Z])/g, " $1").trim(),
+      score,
+    })
+  );
+
+  const trendData = analytics.improvementTrend.map((item) => ({
+    date: new Date(item.date).toLocaleDateString(),
+    score: item.score,
+  }));
+
+  const avgData = [
+    {
+      name: "Score",
+      value: Math.max(0, Math.min(100, analytics.averageScore)),
+    },
+    {
+      name: "Remaining",
+      value: Math.max(
+        0,
+        100 - Math.max(0, Math.min(100, analytics.averageScore))
+      ),
+    },
+  ];
+
+  const PIE_COLORS = ["#10b981", "#e5e7eb"];
+
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 max-w-6xl mx-auto">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Resume Analytics</h1>
-        <p className="text-gray-600">Detailed insights from your resume analyses</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Resume Analytics
+        </h1>
+        <p className="text-gray-600">
+          Detailed insights from your resume analyses
+        </p>
       </div>
 
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Analyses</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Total Analyses
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{analytics.totalAnalyses}</div>
+            <div className="text-3xl font-bold text-blue-600">
+              {analytics.totalAnalyses}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Average Score</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Average Score
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">{analytics.averageScore.toFixed(1)}%</div>
+            <div className="flex items-center gap-4">
+              <div className="w-28 h-28">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={avgData}
+                      dataKey="value"
+                      innerRadius={40}
+                      outerRadius={54}
+                      paddingAngle={0}
+                      startAngle={90}
+                      endAngle={-270}
+                    >
+                      {avgData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={PIE_COLORS[index % PIE_COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-green-600">
+                  {analytics.averageScore.toFixed(1)}%
+                </div>
+                <p className="text-xs text-gray-500">
+                  Average across all analyses
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Improvement Trend</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Improvement Trend
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-purple-600">
-              {analytics.improvementTrend.length > 1 
-                ? analytics.improvementTrend[analytics.improvementTrend.length - 1].score > analytics.improvementTrend[0].score 
-                  ? '↗️' 
-                  : '↘️'
-                : '—'
-              }
+            <div className="w-full h-40">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={trendData}
+                  margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 12 }}
+                    hide={trendData.length > 12}
+                  />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} width={28} />
+                  <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
+                  <Line
+                    type="monotone"
+                    dataKey="score"
+                    stroke="#8b5cf6"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
@@ -100,13 +226,45 @@ const Analytics = () => {
           <CardTitle>Section Performance</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="w-full h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={sectionData}
+                margin={{ top: 8, right: 8, left: 0, bottom: 8 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="section"
+                  tick={{ fontSize: 12 }}
+                  interval={0}
+                  angle={0}
+                  height={40}
+                />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} width={28} />
+                <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
+                <Legend
+                  verticalAlign="top"
+                  height={24}
+                  wrapperStyle={{ fontSize: 12 }}
+                />
+                <Bar
+                  dataKey="score"
+                  name="Score"
+                  fill="#3b82f6"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
           {Object.entries(analytics.sectionAverages).map(([section, score]) => (
             <div key={section} className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium capitalize">
-                  {section.replace(/([A-Z])/g, ' $1').trim()}
+                  {section.replace(/([A-Z])/g, " $1").trim()}
                 </span>
-                <span className="text-sm text-gray-600">{score.toFixed(1)}%</span>
+                <span className="text-sm text-gray-600">
+                  {score.toFixed(1)}%
+                </span>
               </div>
               <Progress value={score} className="h-2" />
             </div>
@@ -124,16 +282,20 @@ const Analytics = () => {
             {analytics.topStrengths.length > 0 ? (
               <div className="space-y-3">
                 {analytics.topStrengths.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                    <span className="text-sm font-medium text-green-800">{item.strength}</span>
-                    <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">
-                      {item.count} {item.count === 1 ? 'time' : 'times'}
+                  <div
+                    key={index}
+                    className="flex justify-between items-center p-3 bg-green-50 rounded-lg"
+                  >
+                    <span className="text-sm font-medium text-green-800">
+                      {item.strength}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-sm">No strengths identified yet.</p>
+              <p className="text-gray-500 text-sm">
+                No strengths identified yet.
+              </p>
             )}
           </CardContent>
         </Card>
@@ -146,16 +308,20 @@ const Analytics = () => {
             {analytics.commonWeaknesses.length > 0 ? (
               <div className="space-y-3">
                 {analytics.commonWeaknesses.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
-                    <span className="text-sm font-medium text-red-800">{item.weakness}</span>
-                    <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded-full">
-                      {item.count} {item.count === 1 ? 'time' : 'times'}
+                  <div
+                    key={index}
+                    className="flex justify-between items-center p-3 bg-red-50 rounded-lg"
+                  >
+                    <span className="text-sm font-medium text-red-800">
+                      {item.weakness}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-sm">No weaknesses identified yet.</p>
+              <p className="text-gray-500 text-sm">
+                No weaknesses identified yet.
+              </p>
             )}
           </CardContent>
         </Card>
@@ -168,15 +334,28 @@ const Analytics = () => {
             <CardTitle>Score Improvement Trend</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {analytics.improvementTrend.map((trend, index) => (
-                <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm text-gray-600">
-                    {new Date(trend.date).toLocaleDateString()}
-                  </span>
-                  <span className="text-sm font-medium text-gray-900">{trend.score.toFixed(1)}%</span>
-                </div>
-              ))}
+            <div className="w-full h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={trendData}
+                  margin={{ top: 16, right: 16, bottom: 0, left: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} width={32} />
+                  <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Line
+                    type="monotone"
+                    dataKey="score"
+                    name="Score"
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
@@ -190,24 +369,36 @@ const Analytics = () => {
         <CardContent>
           <div className="space-y-4">
             <div className="p-4 bg-blue-50 rounded-lg">
-              <h4 className="font-medium text-blue-900 mb-2">Best Performing Section</h4>
+              <h4 className="font-medium text-blue-900 mb-2">
+                Best Performing Section
+              </h4>
               <p className="text-blue-800">
                 {Object.entries(analytics.sectionAverages)
-                  .sort(([,a], [,b]) => b - a)[0][0]
-                  .replace(/([A-Z])/g, ' $1')
-                  .trim()} 
-                ({Math.max(...Object.values(analytics.sectionAverages)).toFixed(1)}%)
+                  .sort(([, a], [, b]) => b - a)[0][0]
+                  .replace(/([A-Z])/g, " $1")
+                  .trim()}
+                (
+                {Math.max(...Object.values(analytics.sectionAverages)).toFixed(
+                  1
+                )}
+                %)
               </p>
             </div>
-            
+
             <div className="p-4 bg-yellow-50 rounded-lg">
-              <h4 className="font-medium text-yellow-900 mb-2">Area for Improvement</h4>
+              <h4 className="font-medium text-yellow-900 mb-2">
+                Area for Improvement
+              </h4>
               <p className="text-yellow-800">
                 {Object.entries(analytics.sectionAverages)
-                  .sort(([,a], [,b]) => a - b)[0][0]
-                  .replace(/([A-Z])/g, ' $1')
-                  .trim()} 
-                ({Math.min(...Object.values(analytics.sectionAverages)).toFixed(1)}%)
+                  .sort(([, a], [, b]) => a - b)[0][0]
+                  .replace(/([A-Z])/g, " $1")
+                  .trim()}
+                (
+                {Math.min(...Object.values(analytics.sectionAverages)).toFixed(
+                  1
+                )}
+                %)
               </p>
             </div>
 
@@ -215,10 +406,21 @@ const Analytics = () => {
               <div className="p-4 bg-green-50 rounded-lg">
                 <h4 className="font-medium text-green-900 mb-2">Progress</h4>
                 <p className="text-green-800">
-                  {analytics.improvementTrend[analytics.improvementTrend.length - 1].score > analytics.improvementTrend[0].score 
-                    ? `Your scores have improved by ${(analytics.improvementTrend[analytics.improvementTrend.length - 1].score - analytics.improvementTrend[0].score).toFixed(1)}%`
-                    : `Your scores have decreased by ${(analytics.improvementTrend[0].score - analytics.improvementTrend[analytics.improvementTrend.length - 1].score).toFixed(1)}%`
-                  } since your first analysis.
+                  {analytics.improvementTrend[
+                    analytics.improvementTrend.length - 1
+                  ].score > analytics.improvementTrend[0].score
+                    ? `Your scores have improved by ${(
+                        analytics.improvementTrend[
+                          analytics.improvementTrend.length - 1
+                        ].score - analytics.improvementTrend[0].score
+                      ).toFixed(1)}%`
+                    : `Your scores have decreased by ${(
+                        analytics.improvementTrend[0].score -
+                        analytics.improvementTrend[
+                          analytics.improvementTrend.length - 1
+                        ].score
+                      ).toFixed(1)}%`}{" "}
+                  since your first analysis.
                 </p>
               </div>
             )}

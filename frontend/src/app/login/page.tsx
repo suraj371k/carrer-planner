@@ -5,22 +5,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLogin } from "@/hooks/useAuth";
 import Link from "next/link";
-import React, { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 const LoginPage = () => {
   const [form, setForm] = useState({ email: "", password: "" });
   const login = useLogin();
 
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const message = searchParams.get("message");
+    if (message === "login-required") {
+      toast.error("Please login to view this page");
+    }
+  }, [searchParams]);
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
       await login.mutateAsync(form);
-      // onSuccess in useLogin hook will handle the success case
     } catch (error) {
-      // Error will be handled by onError in useLogin hook
-      // But we can add additional handling here if needed
       console.error("Login error:", error);
     }
   };

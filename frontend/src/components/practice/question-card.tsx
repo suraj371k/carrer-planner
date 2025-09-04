@@ -13,7 +13,6 @@ interface QuestionCardProps {
   currentIndex: number;
   totalQuestions?: number;
   score: number;
-  timeRemaining: number;
   onSubmitAnswer: (answerIndex: number) => void;
   isSubmitting: boolean;
 }
@@ -23,20 +22,15 @@ export function QuestionCard({
   currentIndex,
   totalQuestions = 20,
   score,
-  timeRemaining,
   onSubmitAnswer,
   isSubmitting,
 }: QuestionCardProps) {
-  const progress =
-    totalQuestions > 0 ? ((currentIndex + 1) / totalQuestions) * 100 : 0;
+  const safeIndex = Number.isFinite(currentIndex) ? currentIndex : 0;
+  const safeTotal =
+    Number.isFinite(totalQuestions) && totalQuestions > 0 ? totalQuestions : 1;
+  const progress = ((safeIndex + 1) / safeTotal) * 100;
 
-  // Format milliseconds into mm:ss
-  const formatTime = (ms: number) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  };
+ 
 
   if (!question) {
     return (
@@ -55,13 +49,12 @@ export function QuestionCard({
     >
       <Card className="shadow-xl border-2">
         <CardHeader className="space-y-4">
-          {/* Top Row: Question #, Score, Timer */}
           <div className="flex items-center justify-between">
             <Badge
               style={{ backgroundColor: "#e5e7eb", color: "#111827" }}
               className="text-sm"
             >
-              Question {currentIndex + 1}
+              Question {safeIndex + 1}
             </Badge>
 
             <div className="flex items-center gap-4">
@@ -69,18 +62,6 @@ export function QuestionCard({
               <div className="flex items-center gap-1">
                 <Trophy className="h-4 w-4" style={{ color: "#facc15" }} />
                 <span className="font-semibold">Score: {score}</span>
-              </div>
-
-              {/* Timer */}
-              <div
-                className={`flex items-center gap-1 font-semibold ${
-                  timeRemaining <= 10000 ? "text-red-500" : "text-primary"
-                }`}
-              >
-                <Clock className="h-4 w-4" />
-                {timeRemaining > 0
-                  ? formatTime(timeRemaining)
-                  : "Time's up!"}
               </div>
             </div>
           </div>
