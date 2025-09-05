@@ -67,7 +67,6 @@ export async function loginUser(data: LoginData): Promise<{ user: any }> {
     return res.data;
   } catch (error) {
     handleApiError(error);
-    // The following line is unreachable, but ensures TypeScript sees a return
     return {} as { user: any };
   }
 }
@@ -80,7 +79,6 @@ export async function fetchProfile(): Promise<{ user: any }> {
     return res.data;
   } catch (error) {
     handleApiError(error);
-    // The following line is unreachable, but ensures TypeScript sees a return
     return {} as { user: any };
   }
 }
