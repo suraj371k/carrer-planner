@@ -20,7 +20,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "https://career-planner-87nunqoxa-suraj371ks-projects.vercel.app",
+    origin: "https://career-planner-three.vercel.app",
     credentials: true,
   })
 );
