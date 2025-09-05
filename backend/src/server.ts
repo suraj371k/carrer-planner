@@ -17,25 +17,13 @@ const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
 
+
+app.use(cors({
+  origin: "https://carrer-planner.vercel.app",
+  credentials: true
+}))
 app.use(cookieParser());
 
-const allowedOrigins = [
-  "http://localhost:3000",
-  "https://carrer-planner.vercel.app",
-];
-
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, origin);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  })
-);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello from Express + TypeScript!");
