@@ -15,6 +15,9 @@ import resumeRoutes from "./routes/resume.routes";
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust Render/Proxy so Secure cookies are set correctly
+app.set("trust proxy", 1);
+
 app.use(express.json());
 
 // CORS configuration
