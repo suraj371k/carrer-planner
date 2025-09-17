@@ -1,14 +1,17 @@
 "use client"
 import UserSession from '@/components/dashboard/user-sessions'
+import ProtectedRoute from '@/components/ProtectedRoute'
 import React from 'react'
 
 const Dashboard = () => {
   return (
-    <div>
+    <ProtectedRoute>
       <div>
-        <UserSession />
+        <div>
+          <UserSession />
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   )
 }
 

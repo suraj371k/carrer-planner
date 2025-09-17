@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { ArrowRight, Home, Rocket, BookOpen, TrendingUp, Star, Target, Brain, Award } from "lucide-react"  
 import { useRouter } from "next/navigation"
 import { useCareerRoadmap } from "@/hooks/useCareer"
+import ProtectedRoute from "@/components/ProtectedRoute"
 
 const CareerPlanner = () => {
   const items = [
@@ -77,7 +78,8 @@ const CareerPlanner = () => {
 
   const router = useRouter()
   return (
-    <div className="relative w-full overflow-hidden bg-white">
+    <ProtectedRoute>
+      <div className="relative w-full overflow-hidden bg-white">
       {/* Hero Section */}
       <div className="relative flex h-screen min-h-[700px] w-full items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         {/* Content Container */}
@@ -278,7 +280,8 @@ const CareerPlanner = () => {
       </div>
 
    
-    </div>
+      </div>
+    </ProtectedRoute>
   )
 }
 

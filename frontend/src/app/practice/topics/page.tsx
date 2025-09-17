@@ -14,6 +14,7 @@ import { TopicSelector } from "@/components/practice/topic-selector";
 import { QuestionCard } from "@/components/practice/question-card";
 import { CompletionCard } from "@/components/practice/completion-card";
 import { LoadingSpinner } from "@/components/practice/loading-spinner";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function PracticePage() {
   const { data: topics, isLoading, isError, error } = useTopics();
@@ -93,7 +94,8 @@ export default function PracticePage() {
     );
 
   return (
-    <div className="min-h-screen bg-background">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-background" />
@@ -138,6 +140,7 @@ export default function PracticePage() {
           </AnimatePresence>
         </div>
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }
