@@ -7,18 +7,34 @@ exports.authenticate = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const JWT_SECRET = process.env.JWT_SECRET;
 const authenticate = (req, res, next) => {
-    const token = req.cookies?.token; // Make sure `cookie-parser` is used in server.ts
+    // Try to get token from multiple sources
+    let token = req.cookies?.token; // From cookies
+    // If no token in cookies, check Authorization header
     if (!token) {
-        return res.status(401).json({ message: "Authentication required" });
+        const authHeader = req.header('Authorization');
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            token = authHeader.replace('Bearer ', '');
+        }
+    }
+    if (!token) {
+        return res.status(401).json({
+            success: false,
+            message: "Authentication required - no token provided"
+        });
     }
     try {
         // Verify the token
         const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
-        req.user = decoded; // Attach user data to the request
+        console.log("Decoded token:", decoded);
+        req.user = { id: decoded.id };
         next();
     }
     catch (err) {
-        return res.status(401).json({ message: "Invalid or expired token" });
+        console.log("Token verification error:", err);
+        return res.status(401).json({
+            success: false,
+            message: "Invalid or expired token"
+        });
     }
 };
 exports.authenticate = authenticate;

@@ -13,14 +13,13 @@ const createUser = async (req, res) => {
         if (!name || !email || !password || !careerGoal || !skills || !experience) {
             return res.status(400).json({ message: "All fields are required" });
         }
-        // ✅ Ensure email is indexed in MongoDB
         const existingUser = await user_model_1.User.findOne({ email }).select("_id");
         if (existingUser) {
             return res.status(400).json({ message: "User already exists" });
         }
-        // ✅ Hash password securely
+        //  Hash password securely
         const hashedPassword = await bcryptjs_1.default.hash(password, 10);
-        // ✅ Insert user
+        // Insert user
         const user = await user_model_1.User.create({
             name,
             email,
@@ -62,9 +61,9 @@ const loginUser = async (req, res) => {
         });
         // Send token in HTTP-only cookie
         res.cookie("token", token, {
-            httpOnly: true, // Can't be accessed via JS
-            secure: process.env.NODE_ENV === "production", // HTTPS only in prod
-            sameSite: "lax", // CSRF protection
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "none",
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
         res.status(200).json({
@@ -83,7 +82,7 @@ const logoutUser = (req, res) => {
         res.clearCookie("token", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
+            sameSite: "none",
         });
         res.status(200).json({ message: "Logout successful" });
     }

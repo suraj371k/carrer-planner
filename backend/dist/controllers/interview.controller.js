@@ -7,6 +7,7 @@ exports.getUserSession = getUserSession;
 exports.getALlSessions = getALlSessions;
 const generative_ai_1 = require("@google/generative-ai");
 const interview_model_1 = require("../models/interview.model");
+const user_model_1 = require("../models/user.model");
 const genAI = new generative_ai_1.GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // Track-specific prompts
 const TRACK_PROMPTS = {
@@ -43,6 +44,12 @@ const startInterview = async (req, res) => {
     try {
         const { track } = req.body;
         const userId = req.user?.id;
+        const user = await user_model_1.User.findById(userId);
+        if (!user) {
+            return res
+                .status(404)
+                .json({ success: false, message: "User not found" });
+        }
         if (!["frontend", "backend", "fullstack", "devops"].includes(track)) {
             return res.status(400).json({
                 success: false,
@@ -58,6 +65,9 @@ const startInterview = async (req, res) => {
             startTime: new Date(),
             duration: 20 * 60 * 1000, // 20 min in ms
         });
+        // Update user test count
+        user.testsTakenToday += 1;
+        await user.save();
         await session.save();
         res.status(201).json({
             success: true,
@@ -120,7 +130,7 @@ const submitAnswer = async (req, res) => {
         const answerStr = answerIndex.toString();
         const isCorrect = currentQuestion?.correctAnswer === answerStr;
         // Update score (+4 for correct, -1 for wrong)
-        const scoreChange = isCorrect ? 4 : -1;
+        const scoreChange = isCorrect ? 5 : -1;
         session.score += scoreChange;
         // Save the user's answer
         if (currentQuestion) {
@@ -286,7 +296,7 @@ async function getUserSession(req, res) {
             return {
                 ...session.toObject(),
                 correctCount,
-                incorrectCount
+                incorrectCount,
             };
         });
         return res.status(200).json({
@@ -309,7 +319,9 @@ async function getALlSessions(req, res) {
         if (!sessions) {
             return res.status(404).json({ message: "No session found" });
         }
-        return res.status(200).json({ success: true, count: sessions.length, sessions });
+        return res
+            .status(200)
+            .json({ success: true, count: sessions.length, sessions });
     }
     catch (error) {
         return res.status(500).json({

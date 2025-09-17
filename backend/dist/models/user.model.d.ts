@@ -5,7 +5,9 @@ export interface IUser extends Document {
     password: string;
     skills: string;
     experience: string;
-    careerGoal: "Frontend Developer" | "Full Stack Developer" | "Backend Developer" | "Data Scientist" | "AI Engineer" | "Cybersecurity Engineer" | "DevOps Engineer" | "UI/UX Designer" | string;
+    testsTakenToday: number;
+    lastTestDate: Date | null;
+    careerGoal: string;
 }
 export declare const User: import("mongoose").Model<IUser, {}, {}, {}, Document<unknown, {}, IUser, {}, {}> & IUser & Required<{
     _id: unknown;

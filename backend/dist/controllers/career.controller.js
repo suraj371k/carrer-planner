@@ -1,8 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateCareerPath = void 0;
+exports.getRoadmapById = exports.getUserRoadmaps = exports.generateCareerPath = void 0;
 const generative_ai_1 = require("@google/generative-ai");
 const user_model_1 = require("../models/user.model");
+const career_model_1 = require("../models/career.model");
 const genAI = new generative_ai_1.GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const generateCareerPath = async (req, res) => {
     try {
@@ -23,6 +24,26 @@ const generateCareerPath = async (req, res) => {
                 message: "User profile is incomplete. Please provide skills, experience, and career goals."
             });
         }
+        // Check if user already has a recent roadmap (optional - you can skip this)
+        const existingRoadmap = await career_model_1.CareerRoadmap.findOne({ userId })
+            .sort({ createdAt: -1 });
+        // If you want to prevent generating multiple roadmaps within a certain timeframe
+        if (existingRoadmap) {
+            const hoursDiff = (Date.now() - existingRoadmap.createdAt.getTime()) / (1000 * 60 * 60);
+            if (hoursDiff < 24) { // Allow new roadmap only after 24 hours
+                return res.status(200).json({
+                    success: true,
+                    message: "Using existing career roadmap",
+                    roadmap: {
+                        milestones: existingRoadmap.milestones,
+                        skills: existingRoadmap.skills,
+                        courses: existingRoadmap.courses,
+                        jobs: existingRoadmap.jobs,
+                        tips: existingRoadmap.tips,
+                    }
+                });
+            }
+        }
         const prompt = `
 You are an experienced career coach and professional mentor with deep knowledge of global job markets, skills demand trends, and learning resources.
 
@@ -35,13 +56,13 @@ Create a comprehensive, realistic career roadmap with the following requirements
 
 1. MILESTONES (4-6 stages)
    - Format each as: "Stage [X]: [Descriptive Title]"
-   - Description should be 2-3 detailed paragraphs
+   - list skills topics and subtopics like ex-hooks topic ,  usestate , useCallback hook etc.
    - Estimated time format: "[X-Y] Months" or "[First X months in role]"
    - Dependencies should list prerequisites clearly
 
 2. SKILLS (8-12 skills)
    - Mix of technical and soft skills
-   - Importance should explain relevance to the career goal
+   - Importance should be critical , high and medium in one words
    - Levels: Foundational, Intermediate, or Advanced
    - For technical skills, mention specific technologies/languages
 
@@ -168,6 +189,28 @@ EXAMPLE STRUCTURE (for reference only):
                 error: e.message
             });
         }
+        // Save the roadmap to database
+        try {
+            const savedRoadmap = new career_model_1.CareerRoadmap({
+                userId: userId,
+                milestones: jsonResponse.roadmap.milestones,
+                skills: jsonResponse.roadmap.skills,
+                courses: jsonResponse.roadmap.courses,
+                jobs: jsonResponse.roadmap.jobs,
+                tips: jsonResponse.roadmap.tips,
+                userProfile: {
+                    skills: skills,
+                    experience: experience,
+                    careerGoal: careerGoal
+                }
+            });
+            await savedRoadmap.save();
+            console.log("Career roadmap saved to database successfully");
+        }
+        catch (saveError) {
+            console.error("Error saving roadmap to database:", saveError);
+            // Continue with response even if save fails
+        }
         // Successful response
         res.status(200).json({
             success: true,
@@ -185,4 +228,63 @@ EXAMPLE STRUCTURE (for reference only):
     }
 };
 exports.generateCareerPath = generateCareerPath;
+// Additional controller to get user's roadmap history
+const getUserRoadmaps = async (req, res) => {
+    try {
+        const userId = req?.user?.id;
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "Not authenticated" });
+        }
+        const roadmaps = await career_model_1.CareerRoadmap.find({ userId })
+            .sort({ createdAt: -1 })
+            .select("-__v")
+            .limit(10); // Get last 10 roadmaps
+        res.status(200).json({
+            success: true,
+            roadmaps: roadmaps
+        });
+    }
+    catch (error) {
+        console.error("Error fetching user roadmaps:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching roadmap history",
+            error: error.message
+        });
+    }
+};
+exports.getUserRoadmaps = getUserRoadmaps;
+// Controller to get a specific roadmap by ID
+const getRoadmapById = async (req, res) => {
+    try {
+        const userId = req?.user?.id;
+        const { roadmapId } = req.params;
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "Not authenticated" });
+        }
+        const roadmap = await career_model_1.CareerRoadmap.findOne({
+            _id: roadmapId,
+            userId: userId
+        }).select("-__v");
+        if (!roadmap) {
+            return res.status(404).json({
+                success: false,
+                message: "Roadmap not found"
+            });
+        }
+        res.status(200).json({
+            success: true,
+            roadmap: roadmap
+        });
+    }
+    catch (error) {
+        console.error("Error fetching roadmap:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching roadmap",
+            error: error.message
+        });
+    }
+};
+exports.getRoadmapById = getRoadmapById;
 //# sourceMappingURL=career.controller.js.map

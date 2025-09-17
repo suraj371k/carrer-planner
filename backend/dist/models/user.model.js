@@ -8,6 +8,8 @@ const UserSchema = new mongoose_1.Schema({
     password: { type: String, required: true },
     skills: { type: String, default: "" },
     experience: { type: String, required: true },
+    testsTakenToday: { type: Number, default: 0 },
+    lastTestDate: { type: Date, default: null },
     careerGoal: {
         type: String,
         enum: [
@@ -20,8 +22,8 @@ const UserSchema = new mongoose_1.Schema({
             "DevOps Engineer",
             "UI/UX Designer",
         ],
-        required: true
-    }
+        required: true,
+    },
 }, { timestamps: true });
 exports.User = (0, mongoose_1.model)("User", UserSchema);
 //# sourceMappingURL=user.model.js.map
