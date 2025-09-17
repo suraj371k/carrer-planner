@@ -21,7 +21,11 @@ app.set("trust proxy", 1);
 app.use(express.json());
 
 // CORS configuration
-const allowedOrigins = [process.env.CLIENT_URL, "http://localhost:3000"].filter(
+const envOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const allowedOrigins = [process.env.CLIENT_URL, "http://localhost:3000", ...envOrigins].filter(
   Boolean
 ) as string[];
 
@@ -30,6 +34,13 @@ app.use(
     origin: (origin, callback) => {
       if (!origin) return callback(null, true); // allow non-browser or same-origin
       if (allowedOrigins.includes(origin)) return callback(null, true);
+      // Optionally allow all Vercel preview deployments when enabled
+      if (
+        process.env.ALLOW_VERCEL_PREVIEWS === "true" &&
+        /\.vercel\.app$/.test(new URL(origin).hostname)
+      ) {
+        return callback(null, true);
+      }
       return callback(new Error(`Not allowed by CORS: ${origin}`));
     },
     credentials: true,

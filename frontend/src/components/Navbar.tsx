@@ -67,22 +67,19 @@ type NavigationLinkProps = {
   className?: string;
 };
 
-const NavigationLink: React.FC<NavigationLinkProps> = React.memo(({ item, onClick, className }) => {
-  const Icon = item.icon;
-  return (
-    <Link
-      href={item.href}
-      className={className}
-      onClick={onClick}
-    >
-      <Icon className="h-4 w-4" />
-      <span>{item.label}</span>
-    </Link>
-  );
-});
+const NavigationLink: React.FC<NavigationLinkProps> = React.memo(
+  ({ item, onClick, className }) => {
+    const Icon = item.icon;
+    return (
+      <Link href={item.href} className={className} onClick={onClick}>
+        <Icon className="h-4 w-4" />
+        <span>{item.label}</span>
+      </Link>
+    );
+  }
+);
 
 NavigationLink.displayName = "NavigationLink";
-
 
 type User = {
   name?: string;
@@ -102,53 +99,71 @@ const UserAvatar: React.FC<UserAvatarProps> = React.memo(
     const [showFallback, setShowFallback] = useState(false);
 
     useEffect(() => {
-    // Show fallback after a short delay if still loading
-    const timer = setTimeout(() => {
-      if (isLoading) {
-        setShowFallback(true);
-      }
-    }, 200);
-    
-    return () => clearTimeout(timer);
-  }, [isLoading]);
+      // Show fallback after a short delay if still loading
+      const timer = setTimeout(() => {
+        if (isLoading) {
+          setShowFallback(true);
+        }
+      }, 200);
 
-  const sizeClasses = {
-    default: "h-9 w-9 text-sm",
-    small: "h-8 w-8 text-xs"
-  };
+      return () => clearTimeout(timer);
+    }, [isLoading]);
 
-  if (isLoading && !showFallback) {
-    return <Skeleton className={`${sizeClasses[size as keyof typeof sizeClasses]} rounded-full`} />;
-  }
+    const sizeClasses = {
+      default: "h-9 w-9 text-sm",
+      small: "h-8 w-8 text-xs",
+    };
 
-  if (isLoading || !user) {
+    if (isLoading && !showFallback) {
+      return (
+        <Skeleton
+          className={`${
+            sizeClasses[size as keyof typeof sizeClasses]
+          } rounded-full`}
+        />
+      );
+    }
+
+    if (isLoading || !user) {
+      return (
+        <div
+          className={`${
+            sizeClasses[size as keyof typeof sizeClasses]
+          } rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white font-semibold animate-pulse`}
+        >
+          ?
+        </div>
+      );
+    }
+
+    const initials = user.name
+      ? user.name
+          .split(" ")
+          .map((n) => n[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 2)
+      : user.email?.[0]?.toUpperCase() || "?";
+
     return (
-      <div className={`${sizeClasses[size as keyof typeof sizeClasses]} rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white font-semibold animate-pulse`}>
-        ?
+      <div
+        className={`${sizeClasses[size]} rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold shadow-sm`}
+      >
+        {user.avatar && !imageError ? (
+          <img
+            src={user.avatar}
+            alt={user.name || "User"}
+            className="w-full h-full rounded-full object-cover"
+            onError={() => setImageError(true)}
+            loading="lazy"
+          />
+        ) : (
+          <span>{initials}</span>
+        )}
       </div>
     );
   }
-
-  const initials = user.name 
-    ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-    : user.email?.[0]?.toUpperCase() || '?';
-
-  return (
-    <div className={`${sizeClasses[size]} rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold shadow-sm`}>
-      {user.avatar && !imageError ? (
-        <img 
-          src={user.avatar} 
-          alt={user.name || 'User'} 
-          className="w-full h-full rounded-full object-cover"
-          onError={() => setImageError(true)}
-          loading="lazy"
-        />
-      ) : (
-        <span>{initials}</span>
-      )}
-    </div>
-  );
-});
+);
 
 UserAvatar.displayName = "UserAvatar";
 
@@ -221,7 +236,7 @@ const Navbar = () => {
                           <UserAvatar user={user} size="small" />
                           <div className="flex flex-col space-y-1 min-w-0">
                             <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                              {user?.name || 'User'}
+                              {user?.name || "User"}
                             </span>
                             <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
                               {user?.email}
@@ -231,18 +246,13 @@ const Navbar = () => {
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="py-2.5 focus:bg-blue-50 dark:focus:bg-blue-950/50">
-                        <Link className="flex items-center w-full" href="/profile">
+                        <Link
+                          className="flex items-center w-full"
+                          href="/profile"
+                        >
                           <User className="mr-3 h-4 w-4 text-gray-500" />
                           <span className="text-sm">Profile</span>
                         </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="py-2.5 focus:bg-blue-50 dark:focus:bg-blue-950/50">
-                        <CreditCard className="mr-3 h-4 w-4 text-gray-500" />
-                        <span className="text-sm">Billing</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="py-2.5 focus:bg-blue-50 dark:focus:bg-blue-950/50">
-                        <Users className="mr-3 h-4 w-4 text-gray-500" />
-                        <span className="text-sm">Team</span>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
@@ -250,9 +260,7 @@ const Navbar = () => {
                         className="py-2.5 text-red-600 focus:text-red-600 focus:bg-red-50 dark:text-red-400 dark:focus:text-red-400 dark:focus:bg-red-950/50"
                       >
                         <LogOut className="mr-3 h-4 w-4" />
-                        <span className="text-sm">
-                          Logout
-                        </span>
+                        <span className="text-sm">Logout</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -281,7 +289,11 @@ const Navbar = () => {
                     className="h-8 w-8 rounded-full border-gray-300 hover:border-blue-400 transition-all duration-200 dark:border-gray-700 dark:hover:border-blue-500 p-0"
                     disabled={isLoading}
                   >
-                    <UserAvatar user={user} size="small" isLoading={isLoading} />
+                    <UserAvatar
+                      user={user}
+                      size="small"
+                      isLoading={isLoading}
+                    />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -292,7 +304,7 @@ const Navbar = () => {
                   <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
                       <span className="text-sm font-medium truncate">
-                        {user?.name || 'User'}
+                        {user?.name || "User"}
                       </span>
                       <span className="text-xs text-muted-foreground truncate">
                         {user?.email}

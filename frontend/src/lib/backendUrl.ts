@@ -1,3 +1,3 @@
 
 
-export const backendUrl = 'https://carrer-planner.onrender.com'  
+export const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:5000';  
